@@ -1,16 +1,16 @@
 # Start by building the application.
-FROM docker.io/golang:1.21 as build
+FROM docker.io/golang:1.21 AS build
 WORKDIR /usr/src/wireproxy
 COPY . .
 RUN make
 
 # Now copy it into our base image.
-FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y iproute2 && apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM docker.io/alpine:3.18
+RUN apk add --no-cache iproute2
 COPY --from=build /usr/src/wireproxy/wireproxy /usr/bin/wireproxy
 
 # Create a script to run the network setup commands before starting wireproxy
-RUN echo '#!/bin/bash\n\
+RUN echo '#!/bin/sh\n\
 ip tunnel add he-ipv6 mode sit remote "${SERVER_IPV4}" local $(ip addr show eth0 | grep "inet " | awk "{print \$2}" | cut -d"/" -f1) ttl 255\n\
 ip link set he-ipv6 up\n\
 ip addr add "${CLIENT_IPV6}" dev he-ipv6\n\
